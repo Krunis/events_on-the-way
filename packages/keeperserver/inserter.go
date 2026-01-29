@@ -47,33 +47,3 @@ func (k *KeeperServer) InsertEventInDB(ctx context.Context, event driverEvent) e
 
 	return nil
 }
-
-// func (k *KeeperServer) ChangeEventInDB(ctx context.Context, event driverEvent) error {
-// 	tx, err := k.dbPool.Begin(ctx)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer tx.Rollback(ctx)
-
-// 	tag, err := tx.Exec(ctx, `UPDATE trips 
-// 						      SET position=$1 
-// 					          WHERE id=$2 
-// 						   	      AND position IS DISTINCT FROM $1`,
-// 		event.Trip_Position, event.Trip_ID)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to update table trips: %w", err)
-// 	}
-// 	if tag.RowsAffected() == 0{
-// 		return nil
-// 	}
-
-// 	if err := insertInOutbox(ctx, tx, event); err != nil {
-// 		return fmt.Errorf("failed to insert in outbox: %w", err)
-// 	}
-
-// 	if err := tx.Commit(ctx); err != nil {
-// 		return fmt.Errorf("failed to commit transaction: %w", err)
-// 	}
-
-// 	return nil
-// }
