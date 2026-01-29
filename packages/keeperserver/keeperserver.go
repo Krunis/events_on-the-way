@@ -3,8 +3,9 @@ package keeperserver
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/Krunis/events_on-the-way/packages/common"
@@ -12,7 +13,7 @@ import (
 )
 
 type driverEvent struct {
-	Trip_ID            string `json:"trip_id"`
+	Trip_ID       string `json:"trip_id"`
 	Driver_ID     string `json:"driver_id"`
 	Trip_Position string `json:"trip_position"`
 	Destination   string `json:"destination"`
@@ -21,6 +22,7 @@ type driverEvent struct {
 type KeeperServer struct {
 	port       string
 	httpServer *http.Server
+	mux        *http.ServeMux
 
 	dbPool *pgxpool.Pool
 
@@ -33,17 +35,26 @@ type KeeperServer struct {
 func NewServer(serverPort string) *KeeperServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &KeeperServer{port: serverPort, ctx: ctx, cancel: cancel}
+	mux := http.NewServeMux()
+
+	return &KeeperServer{
+		port:   serverPort,
+		mux:    mux,
+		ctx:    ctx,
+		cancel: cancel}
 }
 
 func (k *KeeperServer) Start() error {
-	pool, err := common.ConnectToDB(k.ctx, common.GetDBConnectionString())
+	var err error
+
+	k.dbPool, err = common.ConnectToDB(k.ctx, common.GetDBConnectionString())
 	if err != nil {
 		return err
 	}
 
-	k.dbPool = pool
+	k.mux.HandleFunc("/new-event", k.newDriverEventHandler)
 
+	k.httpServer.Handler = k.mux
 	k.httpServer.Addr = k.port
 
 	errCh := make(chan error, 1)
@@ -62,14 +73,31 @@ func (k *KeeperServer) Start() error {
 	}
 }
 
-func (k *KeeperServer) driverEventHandler(w http.ResponseWriter, r *http.Request) {
-	var event driverEvent
-
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+func (k *KeeperServer) newDriverEventHandler(w http.ResponseWriter, r *http.Request) {
+	select {
+	case <-k.ctx.Done():
+		log.Println("Request cancelled (shutdown or client disconnected)")
 		return
-	}
+	default:
+		if r.Method != "POST" {
+			http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+			return
+		}
 
-	k.InsertEventInDB(, event)
+		var event driverEvent
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
+
+		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := k.InsertEventInDB(ctx, event); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	}
 
 }
