@@ -19,7 +19,7 @@ type driverEvent struct {
 	Destination   string `json:"destination"`
 }
 
-type KeeperServer struct {
+type KeeperServerService struct {
 	port       string
 	httpServer *http.Server
 	mux        *http.ServeMux
@@ -32,22 +32,22 @@ type KeeperServer struct {
 	cancel context.CancelFunc
 }
 
-func NewServer(serverPort string) *KeeperServer {
+func NewServer(serverPort string) *KeeperServerService {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mux := http.NewServeMux()
 
-	return &KeeperServer{
+	return &KeeperServerService{
 		port:   serverPort,
 		mux:    mux,
 		ctx:    ctx,
 		cancel: cancel}
 }
 
-func (k *KeeperServer) Start() error {
+func (k *KeeperServerService) Start(dbConnectionString string) error {
 	var err error
 
-	k.dbPool, err = common.ConnectToDB(k.ctx, common.GetDBConnectionString())
+	k.dbPool, err = common.ConnectToDB(k.ctx, dbConnectionString)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (k *KeeperServer) Start() error {
 	}
 }
 
-func (k *KeeperServer) newDriverEventHandler(w http.ResponseWriter, r *http.Request) {
+func (k *KeeperServerService) newDriverEventHandler(w http.ResponseWriter, r *http.Request) {
 	select {
 	case <-k.ctx.Done():
 		log.Println("Request cancelled (shutdown or client disconnected)")

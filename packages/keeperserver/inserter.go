@@ -2,20 +2,25 @@ package keeperserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/Krunis/events_on-the-way/packages/common"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 )
 
 func insertInOutbox(ctx context.Context, tx pgx.Tx, event driverEvent) error {
-	_, err := tx.Exec(ctx, `INSERT INTO outbox (trip_id, driver_id, trip_position, trip_destination)
-							VALUES ($1, $2, $3, $4)`,
-		event.Trip_ID, event.Driver_ID, event.Trip_Position, event.Destination)
-
+	_, err := tx.Exec(ctx, `INSERT INTO outbox (event_id, trip_id, driver_id, trip_position, trip_destination)
+							VALUES ($1, $2, $3, $4, $5)`,
+		uuid.New(), event.Trip_ID, event.Driver_ID, event.Trip_Position, event.Destination)
 	return err
 }
 
-func (k *KeeperServer) InsertEventInDB(ctx context.Context, event driverEvent) error {
+func (k *KeeperServerService) InsertEventInDB(ctx context.Context, event driverEvent) error {
+	if !common.IsValidTripPosition(event.Trip_Position) {
+		return errors.New("trip_position is incorrect")
+	}
 	tx, err := k.dbPool.Begin(ctx)
 	if err != nil {
 		return err

@@ -11,13 +11,13 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type TripPosition string
+
 
 const (
-	Prepared  TripPosition = "prepared"
-	OnTheWay  TripPosition = "on-the-way"
-	Arrived   TripPosition = "arrived"
-	Completed TripPosition = "completed"
+	Prepared  string = "prepared"
+	OnTheWay  string = "on-the-way"
+	Arrived   string = "arrived"
+	Completed string = "completed"
 )
 
 func GetDBConnectionString() string{
@@ -79,5 +79,14 @@ func ConnectToDB(ctx context.Context, dbConnectionString string) (*pgxpool.Pool,
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
+	}
+}
+
+func IsValidTripPosition(pos string)bool{
+	switch pos{
+	case Prepared, OnTheWay, Arrived, Completed:
+		return true
+	default:
+		return false
 	}
 }

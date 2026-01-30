@@ -4,6 +4,7 @@ go 1.25.3
 
 require (
 	github.com/IBM/sarama v1.46.3
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v4 v4.18.3
 )
 
