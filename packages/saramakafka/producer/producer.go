@@ -11,8 +11,10 @@ type SaramaProducer struct {
 	config       *sarama.Config
 }
 
-func NewProducerService(brokerList []string) (*SaramaProducer, error) {
+func NewSaramaProducer(brokerList []string) (*SaramaProducer, error) {
 	config := sarama.NewConfig()
+
+	config.Producer.Return.Successes = true
 
 	producer, err := sarama.NewSyncProducer(brokerList, config)
 	if err != nil {
@@ -24,7 +26,7 @@ func NewProducerService(brokerList []string) (*SaramaProducer, error) {
 		config:       config,}, nil
 }
 
-func (s *SaramaProducer) SendBatch(ctx context.Context, events []*KafkaEvent) error{
+func (p *SaramaProducer) SendBatch(ctx context.Context, events []*KafkaEvent) error{
 	batch := make([]*sarama.ProducerMessage, len(events))
 
 	for i, event := range events{
@@ -37,7 +39,7 @@ func (s *SaramaProducer) SendBatch(ctx context.Context, events []*KafkaEvent) er
 	
 	}
 
-	if err := s.syncProducer.SendMessages(batch); err != nil{
+	if err := p.syncProducer.SendMessages(batch); err != nil{
 		return err
 	}
 	
@@ -45,5 +47,9 @@ func (s *SaramaProducer) SendBatch(ctx context.Context, events []*KafkaEvent) er
 }
 
 func (s *SaramaProducer) Close() error{
+	if err := s.Close(); err != nil{
+		return err
+	}
 
+	return nil
 }

@@ -72,10 +72,10 @@ func ConnectToDB(ctx context.Context, dbConnectionString string) (*pgxpool.Pool,
 				return dbPool, nil
 			}
 
-			log.Println("Failed to connect to DB. Retrying...")
+			log.Printf("Failed to connect to DB: %s. Retrying...\n", err)
 
 		case <-timer.C:
-			return nil, fmt.Errorf("db connection timeout (25s): %w", err)
+			return nil, fmt.Errorf("db connection timeout (25s): %v", err)
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}

@@ -7,10 +7,10 @@ import (
 	"github.com/Krunis/events_on-the-way/packages/types"
 )
 type KafkaEvent struct {
-	types.Row
+	*types.Row
 	Timestamp     time.Time
 }
-func NewKafkaEvent(row types.Row) *KafkaEvent{
+func NewKafkaEvent(row *types.Row) *KafkaEvent{
 	return &KafkaEvent{
 		Row: row,
 		Timestamp: time.Now(),

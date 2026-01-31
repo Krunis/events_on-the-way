@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS drivers(
     registered_at TIMESTAMPTZ NOT NULL,
     car_type TEXT NOT NULL,
     count_trips INTEGER DEFAULT 0,
-    count_succesful_trips INTEGER DEAFULT 0;
+    count_succesful_trips INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS trips(
@@ -19,14 +19,14 @@ CREATE TABLE IF NOT EXISTS trips(
     destination TEXT NOT NULL,
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ
-)
+);
 
 CREATE TABLE IF NOT EXISTS outbox(
-    event_id UUID PRIMARY KEY
+    event_id UUID PRIMARY KEY,
     trip_id TEXT NOT NULL REFERENCES trips(id),
     driver_id UUID NOT NULL REFERENCES drivers(id),
     trip_position triptype_position NOT NULL,
     trip_destination TEXT NOT NULL,
-    event_status TEXT NOT NULL DEFAULT "NEW",
+    event_status TEXT NOT NULL DEFAULT 'NEW',
     created_at TIMESTAMPTZ NOT NULL
-)
+);
