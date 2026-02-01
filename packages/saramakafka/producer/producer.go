@@ -2,6 +2,8 @@ package producer
 
 import (
 	"context"
+	"log"
+	"time"
 
 	"github.com/IBM/sarama"
 )
@@ -14,7 +16,23 @@ type SaramaProducer struct {
 func NewSaramaProducer(brokerList []string) (*SaramaProducer, error) {
 	config := sarama.NewConfig()
 
+	config.Producer.RequiredAcks = sarama.WaitForAll
+    config.Producer.Idempotent = true
+    config.Net.MaxOpenRequests = 1
+
+	config.Producer.Retry.Max = 10
+    config.Producer.Retry.Backoff = 100 * time.Millisecond
+
 	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
+
+	config.Producer.Partitioner = sarama.NewHashPartitioner
+
+	config.Producer.Timeout = 30 * time.Second
+    config.Net.DialTimeout = 30 * time.Second
+    config.Net.ReadTimeout = 30 * time.Second
+    config.Net.WriteTimeout = 30 * time.Second
+
 
 	producer, err := sarama.NewSyncProducer(brokerList, config)
 	if err != nil {
@@ -43,11 +61,13 @@ func (p *SaramaProducer) SendBatch(ctx context.Context, events []*KafkaEvent) er
 		return err
 	}
 	
+	log.Println("Sent")
+
 	return nil
 }
 
 func (s *SaramaProducer) Close() error{
-	if err := s.Close(); err != nil{
+	if err := s.syncProducer.Close(); err != nil{
 		return err
 	}
 

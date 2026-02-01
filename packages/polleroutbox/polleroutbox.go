@@ -61,7 +61,7 @@ func (p *PollerOutboxService) Start(producer producer.Producer, dbConnectionStri
 	for {
 		select {
 		case <-ticker.C:
-			ctx, cancel := context.WithTimeout(p.lifecycle.ctx, time.Second*10)
+			ctx, cancel := context.WithTimeout(p.lifecycle.ctx, time.Second * 10)
 			defer cancel()
 
 			if err := p.processBatch(ctx); err != nil {
@@ -74,7 +74,13 @@ func (p *PollerOutboxService) Start(producer producer.Producer, dbConnectionStri
 }
 
 func (p *PollerOutboxService) processBatch(ctx context.Context) error {
-	rows, err := p.GetRowsFromOutbox()
+	tx, err := p.dbPool.Begin(ctx)
+	if err != nil{
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := p.GetRowsFromOutbox(ctx, tx)
 	if err != nil {
 		return fmt.Errorf("failed to select from outbox: %w", err)
 	}
@@ -93,9 +99,15 @@ func (p *PollerOutboxService) processBatch(ctx context.Context) error {
 		return err
 	}
 
-	if err := p.MarkAsSentOutbox(ctx, rows); err != nil {
+	if err := p.MarkAsSentOutbox(ctx, tx, rows); err != nil {
 		return err
 	}
+
+	if err := tx.Commit(ctx); err != nil{
+		return err
+	}
+	
+	log.Println("Commited")
 
 	return nil
 }
@@ -114,7 +126,7 @@ func (p *PollerOutboxService) Stop() error {
 			log.Println("Stopping producer..")
 
 			if err = p.producer.Close(); err != nil {
-				log.Printf("Failed to clode producer: %s", err)
+				log.Printf("Failed to close producer: %s", err)
 			}
 
 			log.Println("Producer stopped")
