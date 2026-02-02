@@ -28,14 +28,18 @@ func (k *KeeperServerService) InsertEventInDB(ctx context.Context, event driverE
 	}
 	defer tx.Rollback(ctx)
 
-	tag, err := tx.Exec(ctx, `INSERT INTO trips (id, driver_id, position, destination)
-				  			  VALUES ($1, $2, $3, $4)
+	tag, err := tx.Exec(ctx, `INSERT INTO trips (id, driver_id, position, destination, started_at)
+				  			  VALUES ($1, $2, $3, $4, $5)
 				  			  ON CONFLICT (id) 
-							  DO UPDATE 
-							  SET position=EXCLUDED.position
+							  DO UPDATE SET 
+							  	position=EXCLUDED.position
+								finished_at=CASE 
+            						WHEN EXCLUDED.position = 'completed' AND trips.finished_at IS NULL
+            						THEN CURRENT_TIMESTAMP
+        						END
 							  WHERE trips.position 
 							  IS DISTINCT FROM EXCLUDED.position`,
-		event.Trip_ID, event.Driver_ID, event.Trip_Position, event.Destination)
+		event.Trip_ID, event.Driver_ID, event.Trip_Position, event.Destination, time.Now())
 	if err != nil {
 		return fmt.Errorf("failed to insert in table trips: %w", err)
 	}

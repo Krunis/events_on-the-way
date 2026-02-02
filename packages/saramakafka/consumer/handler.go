@@ -30,7 +30,7 @@ func (c *ConsumerService) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 					continue
 				}
 
-
+				
 				
 			
 			case <-session.Context().Done():
