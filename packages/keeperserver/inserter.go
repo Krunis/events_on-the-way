@@ -3,26 +3,25 @@ package keeperserver
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
-	"github.com/Krunis/events_on-the-way/packages/common"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 )
 
-func insertInOutbox(ctx context.Context, tx pgx.Tx, event driverEvent) error {
+func insertInOutbox(ctx context.Context, tx pgx.Tx, event DriverEvent) error {
 	_, err := tx.Exec(ctx, `INSERT INTO outbox (event_id, trip_id, driver_id, trip_position, trip_destination, created_at)
 							VALUES ($1, $2, $3, $4, $5, $6)`,
 		uuid.New(), event.Trip_ID, event.Driver_ID, event.Trip_Position, event.Destination, time.Now())
 	return err
 }
 
-func (k *KeeperServerService) InsertEventInDB(ctx context.Context, event driverEvent) error {
-	if !common.IsValidTripPosition(event.Trip_Position) {
+func (k *KeeperServerService) InsertEventInDB(ctx context.Context, event DriverEvent) error {
+	if !IsValidTripPosition(event.Trip_Position) {
 		return errors.New("trip_position is incorrect")
 	}
-	tx, err := k.dbPool.Begin(ctx)
+
+	tx, err := k.DBPool.Begin(ctx)
 	if err != nil {
 		return err
 	}
@@ -41,32 +40,32 @@ func (k *KeeperServerService) InsertEventInDB(ctx context.Context, event driverE
 							  IS DISTINCT FROM EXCLUDED.position`,
 		event.Trip_ID, event.Driver_ID, event.Trip_Position, event.Destination, time.Now())
 	if err != nil {
-		return fmt.Errorf("failed to insert in table trips: %w", err)
+		return FormatDBError("insert in table trips", err)
 	}
 	if tag.RowsAffected() == 0 {
 		return nil
 	}
 
 	if err := insertInOutbox(ctx, tx, event); err != nil {
-		return fmt.Errorf("failed to insert in outbox: %w", err)
+		return FormatDBError("insert in outbox", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return FormatDBError("commit transaction", err)
 	}
 
 	return nil
 }
 
-func (k *KeeperServerService) RegDriverToDB(ctx context.Context, regDriver regDriverRequest) (uuid.UUID, error){
-	row := k.dbPool.QueryRow(ctx, `INSERT INTO drivers (name_dr, surname_dr, registered_at, car_type)
+func (k *KeeperServerService) RegDriverToDB(ctx context.Context, regDriver RegDriverRequest) (uuid.UUID, error){
+	row := k.DBPool.QueryRow(ctx, `INSERT INTO drivers (name_dr, surname_dr, registered_at, car_type)
 						VALUES ($1, $2, $3, $4)
 						RETURNING id`, regDriver.Name, regDriver.Surname, time.Now(), regDriver.Car_Type)
 
 	var id uuid.UUID
 
 	if err := row.Scan(&id); err != nil{
-		return uuid.Nil, fmt.Errorf("failed to insert data: %s", err)
+		return uuid.Nil, FormatDBError("insert data", err)
 	}
 
 	return id, nil

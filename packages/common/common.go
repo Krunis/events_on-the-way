@@ -82,11 +82,3 @@ func ConnectToDB(ctx context.Context, dbConnectionString string) (*pgxpool.Pool,
 	}
 }
 
-func IsValidTripPosition(pos string)bool{
-	switch pos{
-	case Prepared, OnTheWay, Arrived, Completed:
-		return true
-	default:
-		return false
-	}
-}

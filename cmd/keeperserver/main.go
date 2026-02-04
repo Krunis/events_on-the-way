@@ -12,6 +12,8 @@ import (
 )
 
 func main() {
+	var err error
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -23,8 +25,13 @@ func main() {
 
 	errCh := make(chan error, 1)
 
+	keeper.DBPool, err = common.ConnectToDB(keeper.Lifecycle.Ctx, common.GetDBConnectionString())
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go func(){
-		if err := keeper.Start(common.GetDBConnectionString()); err != nil{
+		if err := keeper.Start(); err != nil{
 			errCh <- err
 		}
 	}()
