@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
+	metrics "github.com/Krunis/events_on-the-way/packages/keeperserver/metrics"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type DriverEvent struct {
@@ -41,6 +44,11 @@ type KeeperServerService struct {
 	stopOnce sync.Once
 }
 
+type ResponseWriterWithCode struct{
+	http.ResponseWriter
+	statusCode int
+}
+
 func NewKeeperServerService(serverPort string) *KeeperServerService {
 	mux := http.NewServeMux()
 
@@ -62,9 +70,11 @@ func (k *KeeperServerService) Start() error {
 	k.mux.HandleFunc("/reg", k.RegDriverHandler)
 	k.mux.HandleFunc("/new-event", k.NewDriverEventHandler)
 
+	k.mux.Handle("/metrics", promhttp.Handler())
+
 	k.httpServer = &http.Server{}
 
-	k.httpServer.Handler = k.mux
+	k.httpServer.Handler = MetricsMiddleware(k.mux)
 	k.httpServer.Addr = k.port
 
 	errCh := make(chan error, 1)
@@ -167,6 +177,24 @@ func (k *KeeperServerService) NewDriverEventHandler(w http.ResponseWriter, r *ht
 		w.WriteHeader(http.StatusCreated)
 	}
 
+}
+
+func (rw *ResponseWriterWithCode) WriteHeader(statusCode int) {
+	rw.statusCode = statusCode
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func MetricsMiddleware(next http.Handler) http.Handler{
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		wWithCode := &ResponseWriterWithCode{ResponseWriter: w, statusCode: 200}
+
+		next.ServeHTTP(wWithCode, r)
+
+		metrics.HTTPEventsTotal.
+			WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(wWithCode.statusCode)).
+			Inc()
+	})
 }
 
 func (k *KeeperServerService) Stop() error {

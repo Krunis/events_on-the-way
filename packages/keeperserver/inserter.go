@@ -31,7 +31,7 @@ func (k *KeeperServerService) InsertEventInDB(ctx context.Context, event DriverE
 				  			  VALUES ($1, $2, $3, $4, $5)
 				  			  ON CONFLICT (id) 
 							  DO UPDATE SET 
-							  	position=EXCLUDED.position
+							  	position=EXCLUDED.position,
 								finished_at=CASE 
             						WHEN EXCLUDED.position = 'completed' AND trips.finished_at IS NULL
             						THEN CURRENT_TIMESTAMP
