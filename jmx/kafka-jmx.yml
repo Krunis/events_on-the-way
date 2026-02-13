@@ -1,0 +1,30 @@
+startDelaySeconds: 0
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=MessagesInPerSec, scope=(.+)><>Count"
+    name: kafka_messages_in_total
+    labels:
+      topic: "$1"
+    type: COUNTER
+
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesInPerSec, scope=(.+)><>Count"
+    name: kafka_bytes_in_total
+    labels:
+      topic: "$1"
+    type: COUNTER
+
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesOutPerSec, scope=(.+)><>Count"
+    name: kafka_bytes_out_total
+    labels:
+      topic: "$1"
+    type: COUNTER
+    
+  - pattern: "kafka.network<type=(.+), name=(.+)><>Value"
+    name: kafka_network_$1_$2
+    type: GAUGE
+
+  - pattern: "kafka.controller<type=(.+), name=(.+)><>Value"
+    name: kafka_controller_$1_$2
+    type: GAUGE

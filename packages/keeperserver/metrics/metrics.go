@@ -7,7 +7,7 @@ var (
 		prometheus.CounterOpts{
 			Name: "http_events_total",
 			Help: "Total number of events to HTTP",
-		}, []string{"method", "hui", "pidor"},
+		}, []string{"method", "path", "status_code"},
 	)
 )
 
