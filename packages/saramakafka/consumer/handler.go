@@ -18,7 +18,6 @@ func (c *ConsumerService) Cleanup(session sarama.ConsumerGroupSession) error {
 
 func (c *ConsumerService) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for {
-		
 			select{
 			case msg, ok := <-claim.Messages():
 				if !ok{

@@ -26,7 +26,7 @@ func NewConsumerService(handler func(msg *sarama.ConsumerMessage) error, topics 
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	consumerGroup, err := sarama.NewConsumerGroup(brokers, "A", GetConfig())
+	consumerGroup, err := sarama.NewConsumerGroup(brokers, groupID, GetConfig())
 	if err != nil{
 		log.Fatalf("Failed to create consumer group: %s\n", err)
 	}
